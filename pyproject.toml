@@ -1,0 +1,192 @@
+[project]
+name = "segd"
+version = "0.1.0"  # Don't manually update; use bump-my-version
+description = "Python SEG-D and UKOOA P1/90 I/O with Cloud Support and Schemas"
+authors = [{ name = "Mark Roberts", email = "mark@seismoforge.ai" }]
+license = "Apache-2.0"
+license-files = ["LICEN[CS]E*"]
+readme = "README.md"
+keywords = ["segd", "p190", "seismic", "data", "geophysics"]
+requires-python = ">=3.11,<3.14"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: Apache Software License",
+    "Development Status :: 4 - Beta"
+]
+
+dependencies = [
+    "fsspec (>=2026.9.0)",
+    "numpy (>=2.3.0,<3.0.0)",
+    "pydantic (>=2.9.2,<3.0.0)",
+    "pydantic-settings (>=2.6.1,<3.0.0)",
+    "pandas (>=2.2.2,<3.0.0)",
+    "typer (>=0.18.0,<1.0.0)",
+    "rapidfuzz (>=3.10.1,<4.0.0)",
+]
+
+[project.optional-dependencies]
+cloud = ["s3fs (>=2026.9.0)", "gcsfs (>=2026.8.1)", "adlfs (>=2026.8.0)"]
+
+[project.urls]
+repository = "https://github.com/seismoforge/segd"
+documentation = "https://segd.readthedocs.io"
+
+[project.scripts]
+segd = "segd.cli.segd:app"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.11.2",
+    "coverage[toml]>=7.8.0",
+    "mypy>=1.15.0",
+    "pytest>=8.3.5",
+    "pygments>=2.19.1",
+    "pre-commit>=4.2.0",
+    "pre-commit-hooks>=5.0.0",
+    "typeguard>=4.4.2",
+    "pandas-stubs>=2.2.3.250308",
+    "xdoctest>=1.2.0",
+    "s3fs>=2026.9.0",
+]
+
+docs = [
+    "sphinx>=8.2.1,<9.0.0",
+    "sphinx-design>=0.7.0",
+    "sphinx-copybutton>=0.5.2",
+    "furo>=2025.12.19",
+    "myst-nb>=1.4.0",
+    "linkify-it-py>=2.2.0",
+    "autodoc-pydantic>=2.2.0",
+    "sphinxcontrib-typer>=0.10.0",
+    "matplotlib>=3.10.8",
+    "s3fs>=2026.9.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+src = ["src"]
+
+[tool.uv]
+required-version = ">=0.8.15"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "B",
+    "I",
+    "UP",
+    "N",
+    "D",
+    "ANN",
+    "S",
+    "A",
+    "C4",
+    "DTZ",
+    "EM",
+    "ICN",
+    "PIE",
+    "PT",
+    "RSE",
+    "RET",
+    "SIM",
+    "TID",
+    "TCH",
+    "ARG",
+    "PTH",
+    "TD",
+    "PL",
+    "FLY",
+    "NPY",
+    "LOG",
+    "G",
+    "PERF",
+]
+
+ignore = [
+    "D107",
+    "PLR2004",  # magic values common in binary format parsers
+    "PERF401",  # list append loops are clearer for card writers
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/segd/standards/fields/*.py" = ["E501"]
+"src/segd/cli/*" = ["TC001", "ANN202"]
+"tests/*" = ["S101", "PLR2004", "D", "ANN", "PLC0415", "TC"]
+
+[tool.ruff.lint.flake8-annotations]
+mypy-init-return = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+force-single-line = true
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 100
+ignore-overlong-task-comments = true
+
+[tool.pydoclint]
+style = "google"
+arg-type-hints-in-docstring = false
+check-return-types = false
+check-yield-types = false
+
+[tool.coverage.paths]
+source = ["src", "*/site-packages"]
+tests = ["tests", "*/tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["segd", "tests"]
+relative_files = true
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 93
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "def __repr__",
+    "raise NotImplementedError",
+]
+
+[tool.mypy]
+strict = true
+warn_unreachable = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+pretty = true
+show_column_numbers = true
+show_error_codes = true
+show_error_context = true
+plugins = ["pydantic.mypy"]
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["fsspec.*"]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.bumpversion]
+current_version = "0.1.0"
+allow_dirty = true
+commit = false
+tag = false
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(\\.dev(?P<dev>\\d+))?"
+serialize = [
+    "{major}.{minor}.{patch}.dev{dev}",
+    "{major}.{minor}.{patch}",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.15,<0.9.0"]
+build-backend = "uv_build"
