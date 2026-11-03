@@ -1,6 +1,6 @@
 [project]
 name = "segd"
-version = "0.1.0"  # Don't manually update; use bump-my-version
+version = "0.1.1"  # Don't manually update; use bump-my-version
 description = "Python SEG-D and UKOOA P1/90 I/O with Cloud Support and Schemas"
 authors = [{ name = "Mark Roberts", email = "mark@seismoforge.ai" }]
 license = "Apache-2.0"
@@ -187,7 +187,7 @@ init_typed = true
 warn_required_dynamic_aliases = true
 
 [tool.bumpversion]
-current_version = "0.1.0"
+current_version = "0.1.1"
 allow_dirty = true
 commit = false
 tag = false
