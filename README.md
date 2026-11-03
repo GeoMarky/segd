@@ -88,7 +88,7 @@ segd_to_segy(
     raw_urls=["shot1.RAW", "shot2.RAW"],
     output_path="out.segy",
     p190_path="line.P190",  # optional
-    sample_format="ieee",   # default; or "ibm"
+    sample_format="ieee",  # default; or "ibm"
 )
 ```
 
