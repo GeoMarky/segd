@@ -60,11 +60,15 @@ def test_collect_raw_urls_skips_small_files_and_honors_a_pattern(
 def test_read_file_list_resolves_relative_names_and_keeps_absolute_paths(
     tmp_path: Path,
 ) -> None:
+    absolute = tmp_path / "elsewhere" / "shot.RAW"
     listing = tmp_path / "files.txt"
-    listing.write_text("# comment\n\nR1.RAW\n/abs/shot.RAW\n", encoding="utf-8")
+    listing.write_text(
+        f"# comment\n\nR1.RAW\n{absolute}\n",
+        encoding="utf-8",
+    )
 
     urls = read_file_list(listing, base_dir=tmp_path)
-    assert urls == [str(tmp_path / "R1.RAW"), "/abs/shot.RAW"]
+    assert urls == [str(tmp_path / "R1.RAW"), str(absolute)]
 
 
 def test_read_file_list_rejects_a_file_with_no_names(tmp_path: Path) -> None:
