@@ -9,6 +9,7 @@ shaped like [segy](https://github.com/TGSAI/segy).
 - Open a single `.RAW` file or an ordered **list** of RAW files as one logical trace set
 - Read and write UKOOA P1/90 (P190) navigation and join it onto trace headers
 - Expose MDIO-compatible trace header field names (`source_coord_x`, `group_coord_y`, …)
+- Optional export to [MDIO](https://mdio.dev) / [multidimio](https://github.com/TGSAI/mdio-python) and [SEG-Y](https://github.com/TGSAI/segy)
 - Spec-driven schemas, factory-based writes, Typer CLI, and Sphinx docs
 
 ## Quickstart
@@ -68,6 +69,27 @@ segd_to_mdio(
 ```
 
 See [docs/mdio_contract.md](docs/mdio_contract.md) for grid overrides, field mapping, and scale notes.
+
+Optional SEG-Y export:
+
+```bash
+uv pip install -e ".[segy]"
+# or
+uv sync --extra segy
+```
+
+```python
+from segd.segy import segd_to_segy
+
+segd_to_segy(
+    raw_urls=["shot1.RAW", "shot2.RAW"],
+    output_path="out.segy",
+    p190_path="line.P190",  # optional
+    sample_format="ieee",   # default; or "ibm"
+)
+```
+
+See [docs/segy_export.md](docs/segy_export.md) for details.
 
 ## Development
 

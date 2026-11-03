@@ -8,6 +8,7 @@ Python SEG-D and UKOOA P1/90 I/O with schemas and an API shaped like `segy`.
 installation
 cli_usage
 mdio_contract
+segy_export
 data_models/file
 data_models/trace
 data_models/p190

@@ -29,3 +29,13 @@ def test_cli_mdio_help() -> None:
     assert "--prefix" in result.stdout
     assert "--suffix" in result.stdout
     assert "--file-list" in result.stdout
+
+
+def test_cli_segy_help() -> None:
+    result = runner.invoke(app, ["segy", "export", "--help"])
+    assert result.exit_code == 0
+    assert "--p190" in result.stdout
+    assert "--sample-format" in result.stdout
+    assert "--prefix" in result.stdout
+    assert "--suffix" in result.stdout
+    assert "--file-list" in result.stdout
