@@ -45,6 +45,13 @@ def write_trace_chunks(  # noqa: PLR0913
 ) -> int:
     """Fetch SEG-D traces in chunks, project headers, and append SEG-Y bytes.
 
+    Args:
+        segd_file: Open SEG-D file supplying samples and logical headers.
+        factory: SEG-Y factory used to encode trace headers and samples.
+        fp: Binary file positioned at the first trace.
+        traces_per_chunk: Number of traces fetched and written per iteration.
+        progress: Show a tqdm progress bar when available.
+
     Returns:
         Number of traces written.
     """

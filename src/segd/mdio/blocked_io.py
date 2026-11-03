@@ -88,9 +88,9 @@ def trace_worker_init(  # noqa: PLR0913
 def trace_worker(region: dict[str, slice]) -> SummaryStatistics | None:
     """Write one chunk region of samples (and headers) into the MDIO Zarr store."""
     segd_file: SegdFile = _worker_state["segd_file"]  # type: ignore[assignment]
-    data_array: zarr_Array = _worker_state["data_array"]  # type: ignore[assignment]
-    header_array: zarr_Array | None = _worker_state["header_array"]  # type: ignore[assignment]
-    grid_map: zarr_Array = _worker_state["grid_map"]  # type: ignore[assignment]
+    data_array: zarr_Array = _worker_state["data_array"]
+    header_array: zarr_Array | None = _worker_state["header_array"]
+    grid_map: zarr_Array = _worker_state["grid_map"]
 
     region_slices = tuple(region.values())
     local_grid_map = grid_map[region_slices[:-1]]

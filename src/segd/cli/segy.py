@@ -5,10 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated
 from typing import Literal
+from typing import cast
 
 import typer
 
 app = typer.Typer(name="segy", help="SEG-Y export commands (requires segd[segy]).")
+
+# Typer treats an Ellipsis default as a required option. The cast keeps the
+# parameter type as Path for mypy.
+_REQUIRED_PATH = cast("Path", ...)
 
 
 @app.command("export")
@@ -24,7 +29,7 @@ def segy_export(  # noqa: PLR0913
     ] = None,
     output: Annotated[
         Path, typer.Option("--output", "-o", help="Output SEG-Y path.")
-    ] = ...,
+    ] = _REQUIRED_PATH,
     p190: Annotated[
         Path | None,
         typer.Option("--p190", help="Optional UKOOA P1/90 navigation file."),

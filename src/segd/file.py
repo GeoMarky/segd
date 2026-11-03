@@ -145,6 +145,9 @@ class SegdFile:
         settings: File settings (endianness, storage options, record order).
         header_overrides: Optional fixed header values applied on read.
         navigation: Optional P190 URL joined onto logical trace headers.
+        cable: Default cable id stamped onto logical headers.
+        gun: Default gun id stamped onto logical headers.
+        sail_line_map: Optional mapping of P190 line name to a dense sail-line id.
     """
 
     def __init__(  # noqa: PLR0913

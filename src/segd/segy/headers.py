@@ -23,6 +23,9 @@ def project_headers_to_segy(
 
     Returns:
         Filled SEG-Y header array (same object as ``segy_header_template``).
+
+    Raises:
+        ValueError: If the logical headers and SEG-Y template have different lengths.
     """
     src = np.atleast_1d(logical_headers)
     dst = segy_header_template

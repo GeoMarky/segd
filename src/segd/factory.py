@@ -175,6 +175,9 @@ class SegdFactory:
 
         Returns:
             Contiguous demux trace payload bytes.
+
+        Raises:
+            ValueError: If the sample array shape does not match the factory layout.
         """
         array = np.asarray(samples, dtype=np.float32)
         if array.ndim == 1:

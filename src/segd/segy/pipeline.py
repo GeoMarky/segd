@@ -113,6 +113,9 @@ def segd_to_segy(  # noqa: PLR0913
     Writes the textual and binary headers once, then appends trace chunks
     sequentially so sample volumes are never fully loaded into memory.
 
+    ``FileExistsError`` is raised when a local output file exists and ``overwrite``
+    is false. ``ValueError`` is raised when inputs or ``sample_format`` are invalid.
+
     Args:
         raw_urls: Single RAW URL, sequence of URLs/filenames, or a directory to scan.
             May be ``None`` when ``file_list`` supplies the inputs.
@@ -130,10 +133,6 @@ def segd_to_segy(  # noqa: PLR0913
         settings: :class:`~segd.config.SegdFileSettings` (endianness, storage, order).
         progress: Show a tqdm progress bar when available.
         traces_per_chunk: Trace batch size (default: channels in the first record).
-
-    Raises:
-        FileExistsError: If local output exists and ``overwrite`` is False.
-        ValueError: If inputs or sample_format are invalid.
     """
     settings = settings or SegdFileSettings()
     if header_overrides is not None and not isinstance(

@@ -107,6 +107,9 @@ def collect_raw_urls(
         prefix: Filename prefix used when ``pattern`` is omitted (default ``R``).
         suffix: Filename extension without requiring a leading dot (default ``RAW``).
         pattern: Optional explicit glob. When omitted, uses ``{prefix}*.{suffix}``.
+
+    Returns:
+        Sorted RAW URLs, excluding EOT markers and files smaller than 64 bytes.
     """
     directory = Path(path)
     suffix = _normalize_file_suffix(suffix)

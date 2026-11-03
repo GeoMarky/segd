@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import cast
 
 import numpy as np
 from mdio.api.io import _normalize_path
@@ -167,6 +168,11 @@ def segd_to_mdio(  # noqa: PLR0913
     headers (no full-sample load). Sample data is written via a process-pool blocked
     Zarr path that opens :class:`~segd.file.SegdFile` in each worker.
 
+    ``FileExistsError`` is raised when the output exists and ``overwrite`` is false.
+    ``ValueError`` is raised when required template fields or calculated dimensions
+    are missing. ``GridTraceCountError`` is raised when live grid cells do not match
+    the RAW trace count.
+
     Args:
         mdio_template: MDIO dataset template (e.g. ``get_template("StreamerShotGathers3D")``).
         raw_urls: Single RAW URL, sequence of RAW URLs/filenames, or a directory to scan.
@@ -184,11 +190,6 @@ def segd_to_mdio(  # noqa: PLR0913
         header_overrides: Optional fixed logical header values.
         settings: :class:`~segd.config.SegdFileSettings` (endianness, storage, order).
         dim_defaults: Optional ``{"cable": 1, "gun": 1, "sail_line_map": {...}}``.
-
-    Raises:
-        FileExistsError: If output exists and ``overwrite`` is False.
-        ValueError: If required template fields / calculated dims are missing.
-        GridTraceCountError: If live grid cells do not match the RAW trace count.
     """
     grid_overrides = _parse_grid_overrides(grid_overrides)
     validate_overrides_for_template(grid_overrides, mdio_template)
@@ -235,8 +236,8 @@ def segd_to_mdio(  # noqa: PLR0913
     }
     file_info = get_segd_file_info(segd_file_kwargs)
 
-    # Duck-typed SegyFileInfo surface for MDIO unit helpers.
-    spatial_unit = get_spatial_coordinate_unit(file_info)  # type: ignore[arg-type]
+    # SegdFileInfo matches the SegyFileInfo attributes this helper reads.
+    spatial_unit = get_spatial_coordinate_unit(cast("Any", file_info))
     units = resolve_units(mdio_template, spatial_unit)
 
     schema_effect = IndexStrategyRegistry().schema_effect(grid_overrides)
@@ -270,7 +271,8 @@ def segd_to_mdio(  # noqa: PLR0913
 
     grid = _build_grid(dimensions, indexed_headers, file_info.num_traces)
 
-    header_dtype = build_mdio_header_type(resolved_spec)  # type: ignore[arg-type]
+    # SegdSpec exposes the trace-header layout this helper reads.
+    header_dtype = build_mdio_header_type(cast("Any", resolved_spec))
     mdio_ds = build_mdio_dataset(
         schema=schema,
         sizes=grid.shape,

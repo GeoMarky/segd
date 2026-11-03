@@ -43,8 +43,7 @@ segd segy export /data/reel --prefix R --suffix RAW -o /tmp/out.segy
 - Writes textual + binary headers once, then **appends** trace chunks sequentially
   (default chunk = one RAW record / channel count). Sample volumes are never fully
   loaded into the parent process.
-- Default sample format is **IEEE float32** (SEG-Y format code 5), matching SEG-D
-  8058. Pass `sample_format="ibm"` for IBM float32 (format code 1).
+- Default sample format is **IEEE float32** (SEG-Y format code 5), matching SEG-D 8058. Pass `sample_format="ibm"` for IBM float32 (format code 1).
 - **P190 is optional.** When provided, logical source/receiver coordinates are
   joined into SEG-Y trace headers (`coordinate_scalar=-10`).
 - Spec default is SEG-Y Rev 1, big-endian, EBCDIC text. Pass a custom `segy_spec`

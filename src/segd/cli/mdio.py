@@ -4,10 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Annotated
+from typing import cast
 
 import typer
 
 app = typer.Typer(name="mdio", help="MDIO ingest commands (requires segd[mdio]).")
+
+# Typer treats an Ellipsis default as a required option. The cast keeps the
+# parameter type as Path for mypy.
+_REQUIRED_PATH = cast("Path", ...)
 
 
 @app.command("import")
@@ -23,10 +28,10 @@ def mdio_import(  # noqa: PLR0913
     ] = None,
     p190: Annotated[
         Path, typer.Option("--p190", help="UKOOA P1/90 navigation file.")
-    ] = ...,
+    ] = _REQUIRED_PATH,
     output: Annotated[
         Path, typer.Option("--output", "-o", help="Output MDIO path.")
-    ] = ...,
+    ] = _REQUIRED_PATH,
     file_list: Annotated[
         Path | None,
         typer.Option(

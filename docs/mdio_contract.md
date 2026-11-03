@@ -72,14 +72,14 @@ segd mdio import /data/reel --file-list shots.txt \
 Logical SEG-D headers (see `segd.standards.fields.trace.Demux8058`) include MDIO
 dimension / coordinate names:
 
-| Field | Source |
-|-------|--------|
-| `shot_point` | GH3 shot point |
-| `channel` | 1…N within the record |
-| `cable` / `gun` | defaults (`1`) or `dim_defaults` |
-| `sail_line` | dense id from unique P190 `line_name` (override with `sail_line_map`) |
-| `source_coord_*` / `group_coord_*` | P190 metres × `coordinate_scalar=-10` |
-| `orig_field_record_num` | FFID / extended file number |
+| Field                              | Source                                                                |
+| ---------------------------------- | --------------------------------------------------------------------- |
+| `shot_point`                       | GH3 shot point                                                        |
+| `channel`                          | 1…N within the record                                                 |
+| `cable` / `gun`                    | defaults (`1`) or `dim_defaults`                                      |
+| `sail_line`                        | dense id from unique P190 `line_name` (override with `sail_line_map`) |
+| `source_coord_*` / `group_coord_*` | P190 metres × `coordinate_scalar=-10`                                 |
+| `orig_field_record_num`            | FFID / extended file number                                           |
 
 Streamer **field** templates (`StreamerFieldRecords3D`) still need
 `auto_shot_wrap=True` so MDIO can emit `shot_index`. Shot-gather templates can

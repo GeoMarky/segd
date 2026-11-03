@@ -160,9 +160,15 @@ def shots_to_tables(
 ) -> tuple[NDArray[np.void], NDArray[np.float64]]:
     """Convert shot gathers to a shot structured array and receivers array.
 
+    Args:
+        shots: Shot gathers to tabulate.
+
     Returns:
         shot_table: structured array with shot metadata
         receivers: shape (n_shots, n_groups, 3) as easting, northing, depth
+
+    Raises:
+        ValueError: If the shots do not all have the same receiver count.
     """
     if not shots:
         empty_shots = np.zeros(
