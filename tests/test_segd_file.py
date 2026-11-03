@@ -10,9 +10,52 @@ import pytest
 from segd import SegdFactory
 from segd import SegdFile
 from segd.catalog import collect_raw_urls
+from segd.catalog import resolve_raw_urls
 from segd.config import SegdHeaderOverrides
 from segd.exceptions import UnsupportedFormatError
 from segd.inference import parse_record_headers
+from segd.p190 import P190Factory
+from segd.p190.schema import PointRecord
+from segd.p190.schema import ReceiverGroup
+from segd.p190.schema import ShotGather
+
+
+def _mock_shot(shot_point: int, n_recv: int, line: str = "LINE") -> ShotGather:
+    source = PointRecord(
+        record_type="S",
+        line_name=line,
+        point_number=shot_point,
+        point_index=1,
+        latitude_raw="421148.70N",
+        longitude_raw="1260421.01W",
+        easting=741710.0,
+        northing=4675783.4,
+        water_depth=2804.2,
+        day_of_year=10,
+        time_hhmmss="010203",
+        time_ms=0,
+        raw="",
+    )
+    receivers = tuple(
+        ReceiverGroup(
+            group_number=i,
+            easting=741530.3 - (i - 1) * 12.6,
+            northing=4675751.3,
+            depth=15.2,
+        )
+        for i in range(1, n_recv + 1)
+    )
+    return ShotGather(
+        line_name=line,
+        shot_point=shot_point,
+        source=source,
+        vessel=None,
+        echo=None,
+        antennas=(),
+        gun=None,
+        tail=None,
+        receivers=receivers,
+    )
 
 
 def test_tiny_segd_roundtrip(tiny_segd_record: str) -> None:
@@ -53,6 +96,42 @@ def test_multi_file_catalog(mock_filesystem: str) -> None:
     np.testing.assert_allclose(sf.sample[2][0], 1.0)
 
 
+def test_multi_file_with_p190(tmp_path: Path) -> None:
+    n_chan, n_samp = 4, 8
+    factory = SegdFactory(
+        samples_per_trace=n_samp,
+        channels_per_record=n_chan,
+        sample_interval=2000,
+    )
+    urls: list[str] = []
+    shots: list[ShotGather] = []
+    for i, shot_point in enumerate((54007, 54008), start=1):
+        samples = np.full((n_chan, n_samp), float(i), dtype=np.float32)
+        url = tmp_path / f"R{i:06d}.RAW"
+        factory.to_file(
+            str(url),
+            samples,
+            file_number=100 + i,
+            shot_point=shot_point,
+            day_of_year=10,
+        )
+        urls.append(str(url))
+        shots.append(_mock_shot(shot_point, n_chan))
+
+    p190 = tmp_path / "nav.P190"
+    P190Factory(headers=["H0100TEST"]).to_file(str(p190), shots)
+
+    sf = SegdFile(urls, navigation=str(p190))
+    assert sf.num_traces == n_chan * 2
+    h0 = sf.header[0]
+    assert int(h0["source_coord_x"]) == 7417100
+    assert int(h0["group_coord_x"]) == 7415303
+    assert int(h0["coordinate_scalar"]) == -10
+    assert int(sf.header[n_chan]["orig_field_record_num"]) == 102
+    assert int(sf.header[n_chan]["trace_num_orig_record"]) == 1
+    assert int(sf.header[n_chan]["shot_point"]) == 54008
+
+
 def test_header_overrides(tiny_segd_record: str) -> None:
     overrides = SegdHeaderOverrides(trace_header={"ensemble_num": 999})
     sf = SegdFile(tiny_segd_record, header_overrides=overrides)
@@ -86,35 +165,58 @@ def test_factory_preserves_template_headers(tiny_segd_record: str) -> None:
     assert len(rewritten) == len(original)
 
 
-@pytest.mark.casie21
-def test_casie21_single_raw(casie21_paths: dict[str, Path]) -> None:
-    sf = SegdFile(str(casie21_paths["raw1"]))
-    assert sf.num_traces == 960
-    assert sf.samples_per_trace == 7500
-    assert sf.sample_interval == 2000
-    assert int(sf.sample_labels[1]) == 2000
-    assert int(sf.header[0]["orig_field_record_num"]) == 37943
-    assert int(sf.header[0]["energy_source_point_num"]) == 54007
-
-
-@pytest.mark.casie21
-def test_casie21_two_raws_with_p190(casie21_paths: dict[str, Path]) -> None:
-    sf = SegdFile(
-        [str(casie21_paths["raw1"]), str(casie21_paths["raw2"])],
-        navigation=str(casie21_paths["p190"]),
+def test_collect_raw_urls_skips_eot(tmp_path: Path) -> None:
+    factory = SegdFactory(
+        samples_per_trace=4,
+        channels_per_record=2,
+        sample_interval=2000,
     )
-    assert sf.num_traces == 1920
-    h0 = sf.header[0]
-    assert int(h0["source_coord_x"]) == 7417100
-    assert int(h0["group_coord_x"]) == 7415303
-    assert int(h0["coordinate_scalar"]) == -10
-    h960 = sf.header[960]
-    assert int(h960["orig_field_record_num"]) == 37944
-    assert int(h960["trace_num_orig_record"]) == 1
+    samples = np.zeros((2, 4), dtype=np.float32)
+    factory.to_file(str(tmp_path / "R000001.RAW"), samples, file_number=1, shot_point=1)
+    factory.to_file(str(tmp_path / "R000002.RAW"), samples, file_number=2, shot_point=2)
+    (tmp_path / "EOT.RAW").write_bytes(b"end-of-tape-marker" * 8)
+
+    urls = collect_raw_urls(tmp_path)
+    assert len(urls) == 2
+    assert all(not Path(u).name.upper().endswith("EOT.RAW") for u in urls)
 
 
-@pytest.mark.casie21
-def test_collect_raw_urls_skips_eot(casie21_paths: dict[str, Path]) -> None:
-    urls = collect_raw_urls(casie21_paths["tape75"])
-    assert urls
-    assert all(not u.upper().endswith("EOT.RAW") for u in urls)
+def test_collect_raw_urls_custom_prefix_suffix(tmp_path: Path) -> None:
+    factory = SegdFactory(
+        samples_per_trace=4,
+        channels_per_record=2,
+        sample_interval=2000,
+    )
+    samples = np.zeros((2, 4), dtype=np.float32)
+    factory.to_file(str(tmp_path / "SHOT001.sgd"), samples, file_number=1, shot_point=1)
+    factory.to_file(str(tmp_path / "SHOT002.sgd"), samples, file_number=2, shot_point=2)
+    factory.to_file(str(tmp_path / "R000003.RAW"), samples, file_number=3, shot_point=3)
+    (tmp_path / "EOT.sgd").write_bytes(b"end-of-tape-marker" * 8)
+
+    urls = collect_raw_urls(tmp_path, prefix="SHOT", suffix="sgd")
+    assert len(urls) == 2
+    assert all(Path(u).suffix.lower() == ".sgd" for u in urls)
+    assert all(Path(u).name.startswith("SHOT") for u in urls)
+
+
+def test_resolve_raw_urls_from_file_list(tmp_path: Path) -> None:
+    factory = SegdFactory(
+        samples_per_trace=4,
+        channels_per_record=2,
+        sample_interval=2000,
+    )
+    samples = np.zeros((2, 4), dtype=np.float32)
+    names = ["R000001.RAW", "R000002.RAW"]
+    for i, name in enumerate(names, start=1):
+        factory.to_file(str(tmp_path / name), samples, file_number=i, shot_point=i)
+
+    list_path = tmp_path / "shots.txt"
+    list_path.write_text(
+        "# selected shots\nR000002.RAW\nR000001.RAW\n", encoding="utf-8"
+    )
+
+    urls = resolve_raw_urls(tmp_path, file_list=list_path)
+    assert [Path(u).name for u in urls] == ["R000002.RAW", "R000001.RAW"]
+
+    urls_explicit = resolve_raw_urls([tmp_path / names[0], tmp_path / names[1]])
+    assert len(urls_explicit) == 2

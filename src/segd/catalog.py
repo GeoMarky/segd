@@ -88,18 +88,103 @@ class RecordCatalog:
         raise IndexError(msg)
 
 
+def _normalize_file_suffix(suffix: str) -> str:
+    """Strip a leading dot from a file suffix."""
+    return suffix[1:] if suffix.startswith(".") else suffix
+
+
 def collect_raw_urls(
     path: str | Path,
     *,
-    pattern: str = "R*.RAW",
+    prefix: str = "R",
+    suffix: str = "RAW",
+    pattern: str | None = None,
 ) -> list[str]:
-    """List demux RAW files in a directory, skipping EOT markers."""
+    """List demux SEG-D files in a directory, skipping EOT markers.
+
+    Args:
+        path: Directory to scan.
+        prefix: Filename prefix used when ``pattern`` is omitted (default ``R``).
+        suffix: Filename extension without requiring a leading dot (default ``RAW``).
+        pattern: Optional explicit glob. When omitted, uses ``{prefix}*.{suffix}``.
+    """
     directory = Path(path)
+    suffix = _normalize_file_suffix(suffix)
+    glob_pattern = pattern if pattern is not None else f"{prefix}*.{suffix}"
+    eot_name = f"EOT.{suffix}".upper()
     return sorted(
         str(p)
-        for p in directory.glob(pattern)
-        if p.name.upper() != "EOT.RAW" and p.stat().st_size > 64
+        for p in directory.glob(glob_pattern)
+        if p.name.upper() != eot_name and p.stat().st_size > 64
     )
+
+
+def read_file_list(
+    file_list: str | Path,
+    *,
+    base_dir: str | Path | None = None,
+) -> list[str]:
+    """Read SEG-D filenames/paths from a text file (one entry per line).
+
+    Blank lines and ``#`` comments are ignored. Relative paths resolve against
+    ``base_dir`` when provided, otherwise against the file-list's parent directory.
+    """
+    list_path = Path(file_list)
+    root = Path(base_dir) if base_dir is not None else list_path.parent
+    urls: list[str] = []
+    for raw_line in list_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        candidate = Path(line)
+        if candidate.is_absolute():
+            urls.append(str(candidate))
+        else:
+            urls.append(str(root / candidate))
+    if not urls:
+        msg = f"File list '{list_path}' did not contain any filenames."
+        raise ValueError(msg)
+    return urls
+
+
+def resolve_raw_urls(
+    raw_urls: str | Path | Sequence[str | Path] | None = None,
+    *,
+    file_list: str | Path | None = None,
+    prefix: str = "R",
+    suffix: str = "RAW",
+    pattern: str | None = None,
+) -> list[str]:
+    """Resolve SEG-D inputs from a directory, explicit paths, or a filename list.
+
+    Precedence:
+        1. ``file_list`` — text file of names/paths (relative names use ``raw_urls``
+           as the base directory when it is a directory).
+        2. Directory ``raw_urls`` — glob with ``prefix`` / ``suffix`` (or ``pattern``).
+        3. Sequence of paths — used as-is.
+        4. Single file path — wrapped as a one-element list.
+    """
+    if file_list is not None:
+        base_dir: str | Path | None = None
+        if raw_urls is not None and isinstance(raw_urls, (str, Path)):
+            candidate = Path(raw_urls)
+            if candidate.is_dir():
+                base_dir = candidate
+        return read_file_list(file_list, base_dir=base_dir)
+
+    if raw_urls is None:
+        msg = "Provide raw_urls and/or file_list."
+        raise ValueError(msg)
+
+    if isinstance(raw_urls, (str, Path)):
+        as_str = str(raw_urls)
+        candidate = Path(as_str)
+        if candidate.is_dir():
+            return collect_raw_urls(
+                candidate, prefix=prefix, suffix=suffix, pattern=pattern
+            )
+        return [as_str]
+    return [str(u) for u in raw_urls]
 
 
 def _sort_urls(

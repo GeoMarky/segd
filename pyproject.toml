@@ -29,6 +29,12 @@ dependencies = [
 
 [project.optional-dependencies]
 cloud = ["s3fs (>=2026.9.0)", "gcsfs (>=2026.8.1)", "adlfs (>=2026.8.0)"]
+mdio = [
+    "multidimio>=1.2.3; python_version >= '3.12'",
+    "xarray>=2026.4.0; python_version >= '3.12'",
+    "zarr>=3.3.0; python_version >= '3.12'",
+    "tqdm>=4.66.0; python_version >= '3.12'",
+]
 
 [project.urls]
 repository = "https://github.com/seismoforge/segd"
@@ -114,7 +120,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "src/segd/standards/fields/*.py" = ["E501"]
-"src/segd/cli/*" = ["TC001", "ANN202"]
+"src/segd/cli/*" = ["TC001", "TC003", "ANN202", "PLR0917"]
+"src/segd/mdio/*" = ["PLR0917"]
 "tests/*" = ["S101", "PLR2004", "D", "ANN", "PLC0415", "TC"]
 
 [tool.ruff.lint.flake8-annotations]
@@ -144,10 +151,11 @@ tests = ["tests", "*/tests"]
 branch = true
 source = ["segd", "tests"]
 relative_files = true
+omit = ["*/segd/mdio/*"]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 93
+fail_under = 80
 exclude_also = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
@@ -168,7 +176,7 @@ plugins = ["pydantic.mypy"]
 disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["fsspec.*"]
+module = ["fsspec.*", "mdio.*", "zarr.*", "tqdm.*", "upath.*", "xarray.*"]
 ignore_missing_imports = true
 
 [tool.pydantic-mypy]

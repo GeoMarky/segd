@@ -37,4 +37,10 @@ class Demux8058(SegStandardEnum):
     HOUR_OF_DAY                 = (161, "int16")
     MINUTE_OF_HOUR              = (163, "int16")
     SECOND_OF_MINUTE            = (165, "int16")
+    # MDIO template dimension / coordinate aliases (logical only)
+    SHOT_POINT                  = (169, "int32")
+    CHANNEL                     = (173, "int32")
+    CABLE                       = (177, "int16")
+    GUN                         = (179, "int16")
+    SAIL_LINE                   = (181, "int32")
 # fmt: on

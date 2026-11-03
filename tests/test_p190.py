@@ -78,13 +78,5 @@ def test_p190_factory_roundtrip(tmp_path: Path) -> None:
     assert nav.num_shots == 1
     assert nav.num_groups == 6
     assert int(nav.shots[0]["shot_point"]) == 100
-
-
-@pytest.mark.casie21
-def test_casie21_p190(casie21_paths: dict[str, Path]) -> None:
-    nav = P190File(str(casie21_paths["p190"]))
-    assert nav.num_shots == 3194
-    assert nav.num_groups == 960
-    assert int(nav.shots[0]["shot_point"]) == 54007
-    assert float(nav.shots[0]["easting"]) == pytest.approx(741710.0)
-    assert float(nav.receivers[0, 0, 0]) == pytest.approx(741530.3)
+    assert float(nav.shots[0]["easting"]) == pytest.approx(1000.0)
+    assert float(nav.receivers[0, 0, 0]) == pytest.approx(1001.0)

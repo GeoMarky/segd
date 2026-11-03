@@ -147,16 +147,23 @@ class SegdFile:
         navigation: Optional P190 URL joined onto logical trace headers.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         url: str | Sequence[str],
         spec: SegdSpec | None = None,
         settings: SegdFileSettings | None = None,
         header_overrides: SegdHeaderOverrides | None = None,
         navigation: str | None = None,
+        *,
+        cable: int = 1,
+        gun: int = 1,
+        sail_line_map: dict[str, int] | None = None,
     ) -> None:
         self.settings = settings or SegdFileSettings()
         self.header_overrides = header_overrides or SegdHeaderOverrides()
+        self.cable = cable
+        self.gun = gun
+        self.sail_line_map = sail_line_map
 
         self.catalog: RecordCatalog = build_catalog(
             url,
@@ -175,7 +182,6 @@ class SegdFile:
             self.spec = spec.model_copy(deep=True)
 
         self._update_spec_from_record(first)
-        self.accessors = TraceAccessor(self.spec.trace, self.header_overrides)
 
         self.navigation: P190File | None = None
         if navigation is not None:
@@ -183,6 +189,22 @@ class SegdFile:
                 navigation,
                 settings={"storage_options": self.settings.storage_options},
             )
+
+        sail_map = sail_line_map
+        if sail_map is None and self.navigation is not None:
+            from segd.accessors import build_sail_line_map  # noqa: PLC0415
+
+            sail_map = build_sail_line_map(
+                [g.line_name for g in self.navigation.shot_gathers]
+            )
+
+        self.accessors = TraceAccessor(
+            self.spec.trace,
+            self.header_overrides,
+            cable=cable,
+            gun=gun,
+            sail_line_map=sail_map,
+        )
 
         self._sample_indexer = DataIndexer(
             catalog=self.catalog,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import typer
 
 from segd.cli.dump import app as dump_app
+from segd.cli.mdio import app as mdio_app
 
 app = typer.Typer(
     name="segd",
@@ -12,6 +13,7 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(dump_app, name="dump")
+app.add_typer(mdio_app, name="mdio")
 
 
 def main() -> None:

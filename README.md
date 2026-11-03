@@ -47,6 +47,28 @@ uv add segd
 pip install segd
 ```
 
+Optional MDIO ingest (Python `>=3.12`):
+
+```bash
+uv pip install -e ".[mdio]"
+# or
+uv sync --extra mdio
+```
+
+```python
+from mdio.builder.template_registry import get_template
+from segd.mdio import segd_to_mdio
+
+segd_to_mdio(
+    get_template("StreamerShotGathers3D"),
+    raw_urls=["shot1.RAW", "shot2.RAW"],
+    p190_path="line.P190",
+    output_path="out.mdio",
+)
+```
+
+See [docs/mdio_contract.md](docs/mdio_contract.md) for grid overrides, field mapping, and scale notes.
+
 ## Development
 
 ```bash

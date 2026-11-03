@@ -23,6 +23,10 @@ if TYPE_CHECKING:
 
 COORD_SCALAR = np.int16(-10)
 
+# Default streamer geometry for single-cable / single-gun surveys.
+DEFAULT_CABLE = 1
+DEFAULT_GUN = 1
+
 
 def _scale_coord(value: float, scalar: int = int(COORD_SCALAR)) -> int:
     """Scale a metre coordinate into an int32 SEG-Y-style field."""
@@ -33,6 +37,15 @@ def _scale_coord(value: float, scalar: int = int(COORD_SCALAR)) -> int:
     return int(round(value * abs(scalar)))
 
 
+def build_sail_line_map(line_names: list[str]) -> dict[str, int]:
+    """Map unique P190 line names to dense sail_line integers starting at 1."""
+    unique: list[str] = []
+    for name in line_names:
+        if name not in unique:
+            unique.append(name)
+    return {name: i + 1 for i, name in enumerate(unique)}
+
+
 class TraceAccessor:
     """Build decode pipelines and logical headers for SEG-D traces."""
 
@@ -40,14 +53,21 @@ class TraceAccessor:
         self,
         trace_spec: TraceSpec,
         header_overrides: SegdHeaderOverrides | None = None,
+        *,
+        cable: int = DEFAULT_CABLE,
+        gun: int = DEFAULT_GUN,
+        sail_line_map: dict[str, int] | None = None,
     ) -> None:
         self.trace_spec = trace_spec
         self.header_overrides = header_overrides
+        self.cable = cable
+        self.gun = gun
+        self.sail_line_map = sail_line_map or {}
         self.header_decode_pipeline = TransformPipeline()
         self.sample_decode_pipeline = TransformPipeline()
         self.trace_decode_pipeline = TransformPipeline()
 
-    def build_logical_headers(  # noqa: PLR0915
+    def build_logical_headers(  # noqa: PLR0912, PLR0915
         self,
         indices: NDArray[Any],
         catalog: RecordCatalog,
@@ -56,11 +76,17 @@ class TraceAccessor:
         """Construct logical MDIO-compatible headers for global indices."""
         dtype = self.trace_spec.header.dtype
         headers = np.zeros(len(indices), dtype=dtype)
+        names = set(dtype.names or ())
 
         shot_map: dict[int, Any] = {}
+        sail_map = dict(self.sail_line_map)
         if navigation is not None:
             for gather in navigation.shot_gathers:
                 shot_map[gather.shot_point] = gather
+            if not sail_map:
+                sail_map = build_sail_line_map(
+                    [g.line_name for g in navigation.shot_gathers]
+                )
 
         for i, global_index in enumerate(indices):
             record, local = catalog.locate(int(global_index))
@@ -85,6 +111,15 @@ class TraceAccessor:
             row["second_of_minute"] = info.second
             row["coordinate_unit"] = 1  # length units
 
+            if "shot_point" in names:
+                row["shot_point"] = shot_point
+            if "channel" in names:
+                row["channel"] = channel
+            if "cable" in names:
+                row["cable"] = self.cable
+            if "gun" in names:
+                row["gun"] = self.gun
+
             if navigation is not None:
                 if shot_point not in shot_map:
                     msg = (
@@ -99,6 +134,9 @@ class TraceAccessor:
                         f"but SEG-D record has {info.channels} channels."
                     )
                     raise NavigationJoinError(msg)
+
+                if "sail_line" in names:
+                    row["sail_line"] = sail_map.get(gather.line_name, 1)
 
                 src = gather.source
                 recv = gather.receivers[local]
@@ -115,9 +153,10 @@ class TraceAccessor:
                 row["source_to_receiver_distance"] = _scale_coord(
                     float(np.hypot(dx, dy))
                 )
+            elif "sail_line" in names:
+                row["sail_line"] = 1
 
             if self.header_overrides is not None:
-                names = dtype.names or ()
                 for key, value in self.header_overrides.trace_header.items():
                     if key in names:
                         row[key] = value
