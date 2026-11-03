@@ -26,7 +26,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_design",
     "myst_nb",
-    "autodoc_pydantic",
+    "sphinxcontrib.autodoc_pydantic",
     "sphinxcontrib.typer",
 ]
 

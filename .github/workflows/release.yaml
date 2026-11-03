@@ -9,6 +9,9 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
@@ -34,10 +37,31 @@ jobs:
       - name: Detect and tag new version
         id: check-version
         if: steps.check-parent-commit.outputs.sha
-        uses: salsify/action-detect-and-tag-new-version@v2.0.3
-        with:
-          version-command: |
-            bump-my-version show current_version
+        run: |
+          set -euo pipefail
+          current="$(bump-my-version show current_version)"
+          git checkout --quiet HEAD^
+          previous="$(bump-my-version show current_version)"
+          git checkout --quiet -
+          {
+            echo "previous-version=${previous}"
+            echo "current-version=${current}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Previous version: ${previous}"
+          echo "Current version: ${current}"
+          if [[ "${current}" == "${previous}" ]]; then
+            exit 0
+          fi
+          tag="v${current}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null; then
+            echo "Tag ${tag} already exists"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            tag -a "${tag}" -m "Released version ${current}"
+          git push origin "refs/tags/${tag}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
       - name: Bump version for developmental release
         if: "! steps.check-version.outputs.tag"
@@ -52,18 +76,28 @@ jobs:
 
       - name: Publish package on PyPI
         if: steps.check-version.outputs.tag
-        uses: pypa/gh-action-pypi-publish@v1.14.3
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          if [[ -z "${UV_PUBLISH_TOKEN}" ]]; then
+            echo "::warning title=PyPI publish skipped::PYPI_TOKEN is not set, so this release was not uploaded."
+            exit 0
+          fi
+          uv publish --trusted-publishing never --no-attestations
 
       - name: Publish package on TestPyPI
         if: "! steps.check-version.outputs.tag"
-        uses: pypa/gh-action-pypi-publish@v1.14.3
-        with:
-          user: __token__
-          password: ${{ secrets.TEST_PYPI_TOKEN }}
-          repository-url: https://test.pypi.org/legacy/
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
+        run: |
+          if [[ -z "${UV_PUBLISH_TOKEN}" ]]; then
+            echo "::warning title=TestPyPI publish skipped::TEST_PYPI_TOKEN is not set, so this developmental release was not uploaded."
+            exit 0
+          fi
+          uv publish \
+            --trusted-publishing never \
+            --no-attestations \
+            --publish-url https://test.pypi.org/legacy/
 
       - name: Publish the release notes
         uses: release-drafter/release-drafter@v7.10.0
