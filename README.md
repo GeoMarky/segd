@@ -3,6 +3,9 @@
 Python SEG-D and UKOOA P1/90 I/O with schemas, cloud support via fsspec, and an API
 shaped like [segy](https://github.com/TGSAI/segy).
 
+> 🚧👷 This project is under active development. Expect potential changes to the API
+> as we process more datasets. 👷🚧
+
 ## Features
 
 - Read demultiplexed SEG-D format `8058` (32-bit IEEE) records

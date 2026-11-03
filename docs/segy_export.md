@@ -20,7 +20,7 @@ segd_to_segy(
     raw_urls=["/path/R1.RAW", "/path/R2.RAW"],  # or a directory
     output_path="/path/out.segy",
     p190_path="/path/line.P190",  # optional
-    sample_format="ieee",         # default; or "ibm"
+    sample_format="ieee",  # default; or "ibm"
     overwrite=False,
 )
 ```
