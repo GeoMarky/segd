@@ -141,7 +141,7 @@ def trace_worker(region: dict[str, slice]) -> SummaryStatistics | None:
         min=float(nonzero_samples.min()),
         max=float(nonzero_samples.max()),
         sum=float(nonzero_samples.sum(dtype="float64")),
-        sum_squares=float(np.ma.power(nonzero_samples, 2).sum(dtype="float64")),
+        sum_squares=float((nonzero_samples**2).sum(dtype="float64")),
         histogram=histogram,
     )
 

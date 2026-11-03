@@ -136,10 +136,7 @@ def precommit(session: Session) -> None:
         "--show-diff-on-failure",
     ]
 
-    session_install_uv_package(
-        session,
-        ["pre-commit", "pre-commit-hooks", "ruff"],
-    )
+    session_install_uv_package(session, ["pre-commit"])
 
     session.run("pre-commit", *args)
     if args and args[0] == "install":

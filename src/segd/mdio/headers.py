@@ -40,10 +40,14 @@ def _scale_array(
 ) -> np.ndarray[Any, Any]:
     """Vectorized metre → int32 SEG-Y-style coordinate scaling."""
     if scalar == 0:
-        return np.rint(values).astype(np.int32)
-    if scalar > 0:
-        return np.rint(values / scalar).astype(np.int32)
-    return np.rint(values * abs(scalar)).astype(np.int32)
+        scaled = values
+    elif scalar > 0:
+        scaled = values / scalar
+    else:
+        scaled = values * abs(scalar)
+    # NumPy 2.4 (Python 3.11) types ndarray.astype as Any.
+    result: np.ndarray[Any, Any] = np.rint(scaled).astype(np.int32)
+    return result
 
 
 def synthesize_index_headers(  # noqa: PLR0912, PLR0913, PLR0915
