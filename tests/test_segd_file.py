@@ -11,13 +11,16 @@ from segd import SegdFactory
 from segd import SegdFile
 from segd.catalog import collect_raw_urls
 from segd.catalog import resolve_raw_urls
+from segd.config import SegdFileSettings
 from segd.config import SegdHeaderOverrides
+from segd.exceptions import NavigationJoinError
 from segd.exceptions import UnsupportedFormatError
 from segd.inference import parse_record_headers
 from segd.p190 import P190Factory
 from segd.p190.schema import PointRecord
 from segd.p190.schema import ReceiverGroup
 from segd.p190.schema import ShotGather
+from segd.schema import Endianness
 
 
 def _mock_shot(shot_point: int, n_recv: int, line: str = "LINE") -> ShotGather:
@@ -220,3 +223,57 @@ def test_resolve_raw_urls_from_file_list(tmp_path: Path) -> None:
 
     urls_explicit = resolve_raw_urls([tmp_path / names[0], tmp_path / names[1]])
     assert len(urls_explicit) == 2
+
+
+def test_zero_step_slices_are_rejected(tiny_segd_record: str) -> None:
+    segd_file = SegdFile(tiny_segd_record)
+    with pytest.raises(ValueError, match="Step of 0"):
+        _ = segd_file.header[::0]
+    with pytest.raises(ValueError, match="Step of 0"):
+        _ = segd_file.trace[::0]
+
+
+def test_trace_slice_returns_each_selected_trace(tiny_segd_record: str) -> None:
+    traces = SegdFile(tiny_segd_record).trace[[0, 1]]
+    assert traces.sample.shape[0] == 2
+
+
+def test_raw_trace_fetch_returns_physical_bytes(tiny_segd_record: str) -> None:
+    segd_file = SegdFile(tiny_segd_record)
+    raw = segd_file.trace.fetch(np.array([0]), raw=True)
+    assert raw.nbytes > 0
+    assert segd_file.trace._fetch_raw(np.array([], dtype=np.int64)).size == 0
+
+
+def test_endianness_and_binary_header_overrides(tiny_segd_record: str) -> None:
+    segd_file = SegdFile(
+        tiny_segd_record,
+        settings=SegdFileSettings(endianness=Endianness.BIG),
+        header_overrides=SegdHeaderOverrides(
+            binary_header={"format_code": 8058},
+            trace_header={"orig_field_record_num": 7},
+        ),
+    )
+    assert segd_file.spec.endianness is Endianness.BIG
+    assert int(segd_file.binary_header["format_code"]) == 8058
+    assert int(segd_file.header[0]["orig_field_record_num"]) == 7
+
+
+def test_navigation_join_reports_a_missing_shot_or_receiver_count(
+    tiny_segd_record: str,
+    tmp_path: Path,
+) -> None:
+    missing = _mock_shot(999, 4)
+    path = tmp_path / "nav.P190"
+    P190Factory(headers=["H0100TEST"]).to_file(str(path), [missing])
+    segd_file = SegdFile(tiny_segd_record, navigation=str(path))
+    with pytest.raises(NavigationJoinError, match="not found"):
+        _ = segd_file.header[0]
+
+    short = _mock_shot(55, 1)
+    path.write_text(
+        P190Factory(headers=["H0100TEST"]).create([short]), encoding="utf-8"
+    )
+    segd_file = SegdFile(tiny_segd_record, navigation=str(path))
+    with pytest.raises(NavigationJoinError, match="receivers"):
+        _ = segd_file.header[0]
